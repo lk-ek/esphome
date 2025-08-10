@@ -67,7 +67,10 @@ To bit_cast(const From &src) {
   return dst;
 }
 #endif
-using std::lerp;
+
+// clang-format off
+inline float lerp(float completion, float start, float end) = delete;  // Please use std::lerp. Notice that it has different order on arguments!
+// clang-format on
 
 // std::byteswap from C++23
 template<typename T> constexpr T byteswap(T n) {
@@ -683,6 +686,23 @@ class InterruptLock {
 #endif
 };
 
+/** Helper class to lock the lwIP TCPIP core when making lwIP API calls from non-TCPIP threads.
+ *
+ * This is needed on multi-threaded platforms (ESP32) when CONFIG_LWIP_TCPIP_CORE_LOCKING is enabled.
+ * It ensures thread-safe access to lwIP APIs.
+ *
+ * @note This follows the same pattern as InterruptLock - platform-specific implementations in helpers.cpp
+ */
+class LwIPLock {
+ public:
+  LwIPLock();
+  ~LwIPLock();
+
+  // Delete copy constructor and copy assignment operator to prevent accidental copying
+  LwIPLock(const LwIPLock &) = delete;
+  LwIPLock &operator=(const LwIPLock &) = delete;
+};
+
 /** Helper class to request `loop()` to be called as fast as possible.
  *
  * Usually the ESPHome main loop runs at 60 Hz, sleeping in between invocations of `loop()` if necessary. When a higher
@@ -783,7 +803,7 @@ template<class T> class RAMAllocator {
   T *reallocate(T *p, size_t n) { return this->reallocate(p, n, sizeof(T)); }
 
   T *reallocate(T *p, size_t n, size_t manual_size) {
-    size_t size = n * sizeof(T);
+    size_t size = n * manual_size;
     T *ptr = nullptr;
 #ifdef USE_ESP32
     if (this->flags_ & Flags::ALLOC_EXTERNAL) {

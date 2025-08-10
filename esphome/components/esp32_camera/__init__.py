@@ -1,3 +1,5 @@
+import logging
+
 from esphome import automation, pins
 import esphome.codegen as cg
 from esphome.components import i2c
@@ -8,6 +10,7 @@ from esphome.const import (
     CONF_CONTRAST,
     CONF_DATA_PINS,
     CONF_FREQUENCY,
+    CONF_I2C,
     CONF_I2C_ID,
     CONF_ID,
     CONF_PIN,
@@ -20,6 +23,9 @@ from esphome.const import (
 )
 from esphome.core import CORE
 from esphome.core.entity_helpers import setup_entity
+import esphome.final_validate as fv
+
+_LOGGER = logging.getLogger(__name__)
 
 DEPENDENCIES = ["esp32"]
 
@@ -250,6 +256,22 @@ CONFIG_SCHEMA = cv.All(
     cv.has_exactly_one_key(CONF_I2C_PINS, CONF_I2C_ID),
 )
 
+
+def _final_validate(config):
+    if CONF_I2C_PINS not in config:
+        return
+    fconf = fv.full_config.get()
+    if fconf.get(CONF_I2C):
+        raise cv.Invalid(
+            "The `i2c_pins:` config option is incompatible with an dedicated `i2c:` block, use `i2c_id` instead"
+        )
+    _LOGGER.warning(
+        "The `i2c_pins:` config option is deprecated. Use `i2c_id:` with a dedicated `i2c:` definition instead."
+    )
+
+
+FINAL_VALIDATE_SCHEMA = _final_validate
+
 SETTERS = {
     # pin assignment
     CONF_DATA_PINS: "set_data_pins",
@@ -308,7 +330,7 @@ async def to_code(config):
     cg.add(var.set_frame_buffer_count(config[CONF_FRAME_BUFFER_COUNT]))
     cg.add(var.set_frame_size(config[CONF_RESOLUTION]))
 
-    cg.add_define("USE_ESP32_CAMERA")
+    cg.add_define("USE_CAMERA")
 
     if CORE.using_esp_idf:
         add_idf_component(name="espressif/esp32-camera", ref="2.0.15")
