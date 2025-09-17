@@ -112,8 +112,8 @@ uint32_t PulseWidthAccumulateSensorStore::get_pulse_skip_count() {
 #endif
 
 void PulseWidthAccumulateSensor::dump_config() {
-  LOG_SENSOR("", "Pulse Width", this)
-  LOG_UPDATE_INTERVAL(this)
+  LOG_SENSOR("", "Pulse Width", this);
+  LOG_UPDATE_INTERVAL(this);
   LOG_PIN("  Pin: ", this->pin_);
   ESP_LOGCONFIG(TAG, "  Lower pulse width threshold in us: %d", LOWER_PULSE_WIDTH_THRESHOLD_VALUE);
   ESP_LOGCONFIG(TAG, "  Relative mode: %s", this->relative_mode_ ? "YES" : "NO");
