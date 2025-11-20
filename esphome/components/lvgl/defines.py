@@ -394,6 +394,8 @@ LV_FLEX_ALIGNMENTS = LvConstant(
     "SPACE_BETWEEN",
 )
 
+LV_FLEX_CROSS_ALIGNMENTS = LV_FLEX_ALIGNMENTS.extend("STRETCH")
+
 LV_MENU_MODES = LvConstant(
     "LV_MENU_HEADER_",
     "TOP_FIXED",
@@ -436,6 +438,7 @@ CONF_BUTTONS = "buttons"
 CONF_BYTE_ORDER = "byte_order"
 CONF_CHANGE_RATE = "change_rate"
 CONF_CLOSE_BUTTON = "close_button"
+CONF_CONTAINER = "container"
 CONF_CONTROL = "control"
 CONF_DEFAULT_FONT = "default_font"
 CONF_DEFAULT_GROUP = "default_group"
@@ -483,6 +486,8 @@ CONF_MSGBOXES = "msgboxes"
 CONF_OBJ = "obj"
 CONF_ONE_CHECKED = "one_checked"
 CONF_ONE_LINE = "one_line"
+CONF_ON_DRAW_START = "on_draw_start"
+CONF_ON_DRAW_END = "on_draw_end"
 CONF_ON_PAUSE = "on_pause"
 CONF_ON_RESUME = "on_resume"
 CONF_ON_SELECT = "on_select"
@@ -504,7 +509,6 @@ CONF_RESUME_ON_INPUT = "resume_on_input"
 CONF_RIGHT_BUTTON = "right_button"
 CONF_ROLLOVER = "rollover"
 CONF_ROOT_BACK_BTN = "root_back_btn"
-CONF_ROWS = "rows"
 CONF_SCALE_LINES = "scale_lines"
 CONF_SCROLLBAR_MODE = "scrollbar_mode"
 CONF_SELECTED_INDEX = "selected_index"
