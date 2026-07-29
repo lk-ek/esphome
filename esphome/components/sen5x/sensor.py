@@ -4,18 +4,28 @@ import esphome.codegen as cg
 from esphome.components import i2c, sensirion_common, sensor
 import esphome.config_validation as cv
 from esphome.const import (
+    CONF_ALGORITHM_TUNING,
     CONF_GAIN_FACTOR,
+    CONF_GATING_MAX_DURATION_MINUTES,
     CONF_HUMIDITY,
     CONF_ID,
+    CONF_INDEX_OFFSET,
+    CONF_LEARNING_TIME_GAIN_HOURS,
+    CONF_LEARNING_TIME_OFFSET_HOURS,
+    CONF_MODEL,
+    CONF_NORMALIZED_OFFSET_SLOPE,
+    CONF_NOX,
     CONF_OFFSET,
     CONF_PM_1_0,
     CONF_PM_2_5,
     CONF_PM_4_0,
     CONF_PM_10_0,
+    CONF_STD_INITIAL,
     CONF_STORE_BASELINE,
     CONF_TEMPERATURE,
     CONF_TEMPERATURE_COMPENSATION,
-    DEVICE_CLASS_AQI,
+    CONF_TIME_CONSTANT,
+    CONF_VOC,
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_PM1,
     DEVICE_CLASS_PM10,
@@ -30,6 +40,7 @@ from esphome.const import (
     UNIT_MICROGRAMS_PER_CUBIC_METER,
     UNIT_PERCENT,
 )
+from esphome.types import ConfigType
 
 CODEOWNERS = ["@martgras"]
 DEPENDENCIES = ["i2c"]
@@ -40,20 +51,10 @@ SEN5XComponent = sen5x_ns.class_(
     "SEN5XComponent", cg.PollingComponent, sensirion_common.SensirionI2CDevice
 )
 RhtAccelerationMode = sen5x_ns.enum("RhtAccelerationMode")
+Sen5xType = sen5x_ns.enum("Sen5xType", is_class=True)
 
 CONF_ACCELERATION_MODE = "acceleration_mode"
-CONF_ALGORITHM_TUNING = "algorithm_tuning"
 CONF_AUTO_CLEANING_INTERVAL = "auto_cleaning_interval"
-CONF_GATING_MAX_DURATION_MINUTES = "gating_max_duration_minutes"
-CONF_INDEX_OFFSET = "index_offset"
-CONF_LEARNING_TIME_GAIN_HOURS = "learning_time_gain_hours"
-CONF_LEARNING_TIME_OFFSET_HOURS = "learning_time_offset_hours"
-CONF_NORMALIZED_OFFSET_SLOPE = "normalized_offset_slope"
-CONF_NOX = "nox"
-CONF_STD_INITIAL = "std_initial"
-CONF_TIME_CONSTANT = "time_constant"
-CONF_VOC = "voc"
-CONF_VOC_BASELINE = "voc_baseline"
 
 
 # Actions
@@ -63,6 +64,12 @@ ACCELERATION_MODES = {
     "low": RhtAccelerationMode.LOW_ACCELERATION,
     "medium": RhtAccelerationMode.MEDIUM_ACCELERATION,
     "high": RhtAccelerationMode.HIGH_ACCELERATION,
+}
+
+MODELS = {
+    "SEN50": Sen5xType.SEN50,
+    "SEN54": Sen5xType.SEN54,
+    "SEN55": Sen5xType.SEN55,
 }
 
 
@@ -78,7 +85,6 @@ def _gas_sensor(
     return sensor.sensor_schema(
         icon=ICON_RADIATOR,
         accuracy_decimals=0,
-        device_class=DEVICE_CLASS_AQI,
         state_class=STATE_CLASS_MEASUREMENT,
     ).extend(
         {
@@ -165,7 +171,6 @@ CONFIG_SCHEMA = (
                 gain_factor=230,
             ),
             cv.Optional(CONF_STORE_BASELINE, default=True): cv.boolean,
-            cv.Optional(CONF_VOC_BASELINE): cv.hex_uint16_t,
             cv.Optional(CONF_TEMPERATURE): sensor.sensor_schema(
                 unit_of_measurement=UNIT_CELSIUS,
                 icon=ICON_THERMOMETER,
@@ -190,6 +195,7 @@ CONFIG_SCHEMA = (
                 }
             ),
             cv.Optional(CONF_ACCELERATION_MODE): cv.enum(ACCELERATION_MODES),
+            cv.Optional(CONF_MODEL): cv.enum(MODELS, upper=True),
         }
     )
     .extend(cv.polling_component_schema("60s"))
@@ -210,10 +216,11 @@ SENSOR_MAP = {
 SETTING_MAP = {
     CONF_AUTO_CLEANING_INTERVAL: "set_auto_cleaning_interval",
     CONF_ACCELERATION_MODE: "set_acceleration_mode",
+    CONF_STORE_BASELINE: "set_store_baseline",
 }
 
 
-async def to_code(config):
+async def to_code(config: ConfigType) -> None:
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await i2c.register_i2c_device(var, config)
@@ -221,6 +228,9 @@ async def to_code(config):
     for key, funcName in SETTING_MAP.items():
         if cfg := config.get(key):
             cg.add(getattr(var, funcName)(cfg))
+
+    if (model := config.get(CONF_MODEL)) is not None:
+        cg.add(var.set_model(model))
 
     for key, funcName in SENSOR_MAP.items():
         if cfg := config.get(key):
@@ -266,7 +276,10 @@ SEN5X_ACTION_SCHEMA = maybe_simple_id(
 
 
 @automation.register_action(
-    "sen5x.start_fan_autoclean", StartFanAction, SEN5X_ACTION_SCHEMA
+    "sen5x.start_fan_autoclean",
+    StartFanAction,
+    SEN5X_ACTION_SCHEMA,
+    synchronous=True,
 )
 async def sen54_fan_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
